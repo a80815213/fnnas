@@ -1,0 +1,3 @@
+# Plain-file wants entry (systemd resolves the unit from /etc/systemd/system/).
+# Enables ys-a99-vpu-fix.service on first boot without relying on a symlink.
+# The real unit file is /etc/systemd/system/ys-a99-vpu-fix.service

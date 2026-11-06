@@ -1,0 +1,16 @@
+[Unit]
+Description=YS-A99 / ZM-A399SE RK3399 VPU (MPP/RGA) first-boot enablement
+Documentation=file:/usr/local/share/ys-a99/VPU-FIX.md
+After=local-fs.target
+ConditionPathExists=/usr/local/lib/ys-a99/ys-a99-vpu-payload.tar.gz
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ys-a99-vpu-fix.sh
+TimeoutStartSec=1200
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -480,7 +480,7 @@ jobs:
           echo "build_tag=${build_tag}" >> ${GITHUB_ENV}
           echo "status=success" >> ${GITHUB_OUTPUT}
 
-      - name: Stage YS-A99 board-specific bootloader
+      - name: Stage YS-A99 bootloader and verify VPU payload
         if: ${{ steps.down.outputs.status == 'success' && !cancelled() }}
         run: |
           # renas reads u-boot blobs from make-fnnas/u-boot/rockchip/<board>/.
@@ -491,6 +491,15 @@ jobs:
           mkdir -p "${uboot_dir}"
           cp -vf "${src_dir}/idbloader.img" "${src_dir}/u-boot.itb" "${uboot_dir}/"
           ls -lh "${uboot_dir}"
+
+          # renas copies different-files/<board>/rootfs into the image ROOTFS.
+          # Print the injected VPU fix files so the build log proves they shipped.
+          board_dir="${{ github.workspace }}/make-fnnas/fnnas-files/different-files/ys-a99"
+          echo "YS-A99 VPU files staged for injection:"
+          find "${board_dir}/rootfs" -type f -printf '%P (%s bytes)\n' | sort
+          sha256sum "${board_dir}/bootfs/dtb/rockchip/rk3399-ys-a99-mpp-rga.dtb" \
+                    "${board_dir}/rootfs/usr/local/lib/ys-a99/ys-a99-vpu-payload.tar.gz"
+          grep -n '^fdtfile=' "${board_dir}/bootfs/armbianEnv.txt"
 
       - name: Package FnNAS for target boards
         if: ${{ steps.down.outputs.status == 'success' && !cancelled() }}
@@ -523,3 +532,5 @@ jobs:
             - 基于 fnnas.com [官方 Arm64 镜像](https://github.com/ophub/fnnas/releases/tag/fnnas_base_image) 构建，
               完整保留官方原版系统体验。
               扩展支持更多基于 Amlogic、Rockchip 及 Allwinner 平台的设备。
+            - YS-A99 / ZM-A399SE (RK3399): VPU/MPP/RGA hardware transcoding fix is built in
+              (MPP-enabled dtb as default, first-boot rebuild of rk_vcodec.ko + mediasrv shim).

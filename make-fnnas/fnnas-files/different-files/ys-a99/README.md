@@ -29,3 +29,21 @@ Boot blobs are extracted from
   rk3399 dtb shipped in `/boot/dtb/rockchip/`.
 - The bootloader is the board's own U-Boot 2020.07. `boot.cmd` from ophub calls `kaslrseed`,
   which this U-Boot does not implement; the command is skipped non-fatally.
+
+## VPU / hardware transcoding (built in)
+
+`rk3399-ys-a99-mpp-rga.dtb` is now the **default** `fdtfile` (set in both `model_database.conf`
+and `bootfs/armbianEnv.txt`). It adds the vendor MPP nodes (`mpp-srv`, `vepu`, `vdpu`, `rkvdec`),
+switches `rga` to `rockchip,rga2` and disables the two mainline `video-codec` nodes.
+The original `rk3399-ys-a99.dtb` is kept for fallback.
+
+`rootfs/` injects the udev permissions rule, the `ys-a99-vpu-fix.service` oneshot unit and
+`ys-a99-vpu-payload.tar.gz` (MPP module source, vendor headers, mediasrv shim source,
+diagnostic and rollback tools). On first boot the service compiles `mediasrv-shim.so` and
+rebuilds `rk_vcodec.ko` against the running kernel - the module vermagic is kernel-specific,
+so it cannot be prebuilt in CI. The result is cached per kernel version in
+`/var/lib/ys-a99-vpu-fix.state`; later boots skip it. See `VPU-FIX.md` for verification,
+rollback and OTA notes.
+
+Verified on hardware: H.264 1080p decode/encode, HEVC 8bit/10bit and 4K decode,
+`mediasrv` log `gpu enable: true, selected sequence list: [1]`.
