@@ -267,6 +267,7 @@ on:
           - youyeetoo-r1-v3
           - youyeetoo-yy3568
           - youyeetoo-yy3588
+          - ys-a99
           - yskj
           - zcube1-max
           - zk-r39a
@@ -473,16 +474,27 @@ jobs:
 
           [[ "${?}" -ne "0" ]] && echo "Error: Download failed." && exit 1
 
-          # Create directory symlinks for packaging
+          # Create directory symlinks for packaging (local composite action uses ./)
           ln -sf /builder/fnnas ${{ github.workspace }}/fnnas
-          ln -sf /builder/fnnas /home/runner/work/_actions/ophub/fnnas/main/fnnas
 
           echo "build_tag=${build_tag}" >> ${GITHUB_ENV}
           echo "status=success" >> ${GITHUB_OUTPUT}
 
+      - name: Stage YS-A99 board-specific bootloader
+        if: ${{ steps.down.outputs.status == 'success' && !cancelled() }}
+        run: |
+          # renas reads u-boot blobs from make-fnnas/u-boot/rockchip/<board>/.
+          # The YS-A99 / ZM-A399SE uses the TPL+SPL and u-boot.itb taken from the
+          # known-good Armbian 20.11 reference image for this exact board.
+          uboot_dir="${{ github.workspace }}/make-fnnas/u-boot/rockchip/ys-a99"
+          src_dir="${{ github.workspace }}/make-fnnas/fnnas-files/different-files/ys-a99/u-boot"
+          mkdir -p "${uboot_dir}"
+          cp -vf "${src_dir}/idbloader.img" "${src_dir}/u-boot.itb" "${uboot_dir}/"
+          ls -lh "${uboot_dir}"
+
       - name: Package FnNAS for target boards
         if: ${{ steps.down.outputs.status == 'success' && !cancelled() }}
-        uses: ophub/fnnas@main
+        uses: ./
         with:
           fnnas_path: fnnas/*.img.xz
           fnnas_board: ${{ inputs.fnnas_board }}
