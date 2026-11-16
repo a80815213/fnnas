@@ -500,7 +500,8 @@ jobs:
           echo "YS-A99 payload checksums:"
           sha256sum "${board_dir}/bootfs/dtb/rockchip/rk3399-ys-a99-mpp-rga.dtb" \
                     "${board_dir}/rootfs/usr/local/lib/ys-a99/ys-a99-vpu-payload.tar.gz" \
-                    "${board_dir}/rootfs/usr/local/sbin/ys-a99-usb-rescan.sh"
+                    "${board_dir}/rootfs/usr/local/sbin/ys-a99-usb-rescan.sh" \
+                    "${board_dir}/rootfs/usr/local/sbin/ys-a99-usb-vbus-recover.sh"
           echo "YS-A99 boot environment:"
           grep -nE '^(fdtfile|extraargs|usbstoragequirks)=' "${board_dir}/bootfs/armbianEnv.txt"
 
@@ -511,10 +512,15 @@ jobs:
                    usr/local/lib/ys-a99/usb-keepawake.sh \
                    etc/systemd/system/ys-a99-usb-rescan.service \
                    usr/local/sbin/ys-a99-usb-rescan.sh \
-                   usr/local/sbin/ys-a99-usb-check.sh; do
+                   usr/local/sbin/ys-a99-usb-check.sh \
+                   etc/systemd/system/ys-a99-usb-vbus-recover.service \
+                   etc/systemd/system/multi-user.target.wants/ys-a99-usb-vbus-recover.service \
+                   usr/local/sbin/ys-a99-usb-vbus-recover.sh; do
               [[ -f "${board_dir}/rootfs/${f}" ]] || { echo "Missing USB fix file: ${f}"; exit 1; }
           done
-          echo "YS-A99 VPU + USB fixes verified in staging tree"
+          grep -q 'vcc5v0-host-regulator' "${board_dir}/rootfs/usr/local/sbin/ys-a99-usb-vbus-recover.sh" || { echo "Missing VBUS recovery logic"; exit 1; }
+          grep -q 'WantedBy=multi-user.target' "${board_dir}/rootfs/etc/systemd/system/ys-a99-usb-vbus-recover.service" || { echo "VBUS recovery service not enabled at boot"; exit 1; }
+          echo "YS-A99 VPU + USB (incl. VBUS self-heal) fixes verified in staging tree"
 
       - name: Package FnNAS for target boards
         if: ${{ steps.down.outputs.status == 'success' && !cancelled() }}
@@ -552,3 +558,6 @@ jobs:
             - YS-A99 / ZM-A399SE: USB disk stability fix is built in (JMS578 UAS quirk
               0x152d:0x0578:u, usbcore.autosuspend=-1, runtime PM keepawake and
               late-arrival /volN auto-mount).
+            - YS-A99 / ZM-A399SE: boot-time VBUS self-heal recovers a JMS578 bridge
+              left unenumerated after a soft reboot / system upgrade, without a
+              physical power-cycle.

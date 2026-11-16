@@ -1,0 +1,15 @@
+[Unit]
+Description=YS-A99 USB VBUS power-cycle recovery for a wedged JMS578 bridge
+Documentation=file:/usr/local/share/ys-a99/USB-FIX.md
+After=local-fs.target
+ConditionPathExists=/sys/class/gpio/gpiochip128
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/ys-a99-usb-vbus-recover.sh
+StandardOutput=null
+StandardError=null
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

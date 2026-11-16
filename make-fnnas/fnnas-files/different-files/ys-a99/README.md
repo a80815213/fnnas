@@ -64,5 +64,18 @@ whose backing USB disk enumerated after fnOS finished its startup scan. The
 `/var/lib/ys-a99-vol-map`; a freshly flashed image pairs the single unseen volume
 using fnOS `trim_file_monitor.conf`. See `USB-FIX.md` for verification and rollback.
 
+After a soft reboot (including a fnOS/system upgrade), the JMS578 can stay
+wedged because `vcc5v0_host` never loses power: `lsusb` then shows only root
+hubs and the disk never enumerates. `ys-a99-usb-vbus-recover.service` (+ script)
+fixes this at boot: ~180s after startup it checks for the bridge, and only if
+the bridge is missing AND fnOS has an external pool configured, it power-cycles
+USB VBUS (unbind `reg-fixed-voltage` for `vcc5v0-host-regulator`, hold GPIO4_D2
+low 3s, restore). The resulting udev add event triggers the rescan unit, which
+reassembles mdadm/LVM and mounts `/volN`. No-op when the disk is already there.
+See `USB-FIX.md` for the known harmless device-link warning and manual use.
+
 Verified on hardware: ~7 days of uptime with zero USB resets/disconnects,
 `scsi host0: usb-storage`, no lost writes, late-arrival auto-mount working.
+2026-11-16: an upgrade-triggered soft reboot left the bridge unenumerated;
+a software VBUS power cycle brought `152d:0578` back and `/vol2` auto-mounted
+with the original fnOS options. Both self-heal decision branches were tested.
