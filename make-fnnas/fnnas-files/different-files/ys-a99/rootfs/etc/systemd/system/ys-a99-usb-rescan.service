@@ -1,0 +1,8 @@
+[Unit]
+Description=YS-A99 external USB disk late-enumeration rescan
+After=trim_init.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ys-a99-usb-rescan.sh
+TimeoutStartSec=90

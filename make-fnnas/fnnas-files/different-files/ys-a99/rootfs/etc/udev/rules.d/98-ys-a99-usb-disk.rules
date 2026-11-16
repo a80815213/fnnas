@@ -1,0 +1,11 @@
+# YS-A99 / ZM-A399SE - stabilize external USB disks.
+#
+# ZOMY ZY603 / JMicron JMS578 (152d:0578) is unstable in UAS mode:
+# it resets, disconnects, sometimes falls back to USB2 or reports factory
+# default descriptors. The UAS-disable quirk is set in /boot/armbianEnv.txt
+# (usbstoragequirks=...,0x152d:0x0578:u). The rules below handle runtime PM
+# and disks that enumerate after fnOS has already finished its disk scan.
+
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="152d", ATTR{idProduct}=="0578", RUN+="/usr/local/lib/ys-a99/usb-keepawake.sh %p"
+
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd*", ENV{DEVTYPE}=="disk", TAG+="systemd", ENV{SYSTEMD_WANTS}+="ys-a99-usb-rescan.service"

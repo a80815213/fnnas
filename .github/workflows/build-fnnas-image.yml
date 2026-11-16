@@ -493,13 +493,28 @@ jobs:
           ls -lh "${uboot_dir}"
 
           # renas copies different-files/<board>/rootfs into the image ROOTFS.
-          # Print the injected VPU fix files so the build log proves they shipped.
+          # Print every injected file so the build log proves VPU + USB fixes shipped.
           board_dir="${{ github.workspace }}/make-fnnas/fnnas-files/different-files/ys-a99"
-          echo "YS-A99 VPU files staged for injection:"
+          echo "YS-A99 rootfs files staged for injection:"
           find "${board_dir}/rootfs" -type f -printf '%P (%s bytes)\n' | sort
+          echo "YS-A99 payload checksums:"
           sha256sum "${board_dir}/bootfs/dtb/rockchip/rk3399-ys-a99-mpp-rga.dtb" \
-                    "${board_dir}/rootfs/usr/local/lib/ys-a99/ys-a99-vpu-payload.tar.gz"
-          grep -n '^fdtfile=' "${board_dir}/bootfs/armbianEnv.txt"
+                    "${board_dir}/rootfs/usr/local/lib/ys-a99/ys-a99-vpu-payload.tar.gz" \
+                    "${board_dir}/rootfs/usr/local/sbin/ys-a99-usb-rescan.sh"
+          echo "YS-A99 boot environment:"
+          grep -nE '^(fdtfile|extraargs|usbstoragequirks)=' "${board_dir}/bootfs/armbianEnv.txt"
+
+          # Fail early if the USB disk fix is incomplete in the source tree.
+          grep -q '0x152d:0x0578:u' "${board_dir}/bootfs/armbianEnv.txt" || { echo "Missing JMS578 UAS quirk"; exit 1; }
+          grep -q 'usbcore.autosuspend=-1' "${board_dir}/bootfs/armbianEnv.txt" || { echo "Missing usbcore.autosuspend=-1"; exit 1; }
+          for f in etc/udev/rules.d/98-ys-a99-usb-disk.rules \
+                   usr/local/lib/ys-a99/usb-keepawake.sh \
+                   etc/systemd/system/ys-a99-usb-rescan.service \
+                   usr/local/sbin/ys-a99-usb-rescan.sh \
+                   usr/local/sbin/ys-a99-usb-check.sh; do
+              [[ -f "${board_dir}/rootfs/${f}" ]] || { echo "Missing USB fix file: ${f}"; exit 1; }
+          done
+          echo "YS-A99 VPU + USB fixes verified in staging tree"
 
       - name: Package FnNAS for target boards
         if: ${{ steps.down.outputs.status == 'success' && !cancelled() }}
@@ -534,3 +549,6 @@ jobs:
               扩展支持更多基于 Amlogic、Rockchip 及 Allwinner 平台的设备。
             - YS-A99 / ZM-A399SE (RK3399): VPU/MPP/RGA hardware transcoding fix is built in
               (MPP-enabled dtb as default, first-boot rebuild of rk_vcodec.ko + mediasrv shim).
+            - YS-A99 / ZM-A399SE: USB disk stability fix is built in (JMS578 UAS quirk
+              0x152d:0x0578:u, usbcore.autosuspend=-1, runtime PM keepawake and
+              late-arrival /volN auto-mount).

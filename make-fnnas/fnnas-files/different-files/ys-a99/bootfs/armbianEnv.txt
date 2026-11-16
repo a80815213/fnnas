@@ -7,7 +7,7 @@ rootfstype=ext4
 rootflags=rw,errors=remount-ro
 overlay_prefix=rk3399
 overlays=
-extraargs=rw rootwait plymouth.enable=0
+extraargs=rw rootwait plymouth.enable=0 usbcore.autosuspend=-1
 extraboardargs=net.ifnames=0 max_loop=128
 docker_optimizations=on
-usbstoragequirks=0x2537:0x1066:u,0x2537:0x1068:u
+usbstoragequirks=0x2537:0x1066:u,0x2537:0x1068:u,0x152d:0x0578:u

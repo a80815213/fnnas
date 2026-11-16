@@ -47,3 +47,22 @@ rollback and OTA notes.
 
 Verified on hardware: H.264 1080p decode/encode, HEVC 8bit/10bit and 4K decode,
 `mediasrv` log `gpu enable: true, selected sequence list: [1]`.
+
+## USB disk stability (built in)
+
+JMicron JMS578 (`152d:0578`) USB3 bridges are unstable in UAS mode on this board:
+they reset/disconnect after a while and can lose writes. `bootfs/armbianEnv.txt` ships
+`usbstoragequirks=...,0x152d:0x0578:u` (forces `usb-storage` BOT) and
+`usbcore.autosuspend=-1` in `extraargs`.
+
+`rootfs/` also injects `98-ys-a99-usb-disk.rules`, `usb-keepawake.sh`,
+`ys-a99-usb-rescan.service` + `ys-a99-usb-rescan.sh` and the read-only
+`ys-a99-usb-check.sh`. The rescan unit is triggered by udev when an `sd*` disk appears:
+it disables disk standby/APM, assembles mdadm/LVM and re-mounts fnOS `/volN` volumes
+whose backing USB disk enumerated after fnOS finished its startup scan. The
+`LV -> /volN` map is learned from `/proc/mounts` (no hard-coded UUIDs) and kept in
+`/var/lib/ys-a99-vol-map`; a freshly flashed image pairs the single unseen volume
+using fnOS `trim_file_monitor.conf`. See `USB-FIX.md` for verification and rollback.
+
+Verified on hardware: ~7 days of uptime with zero USB resets/disconnects,
+`scsi host0: usb-storage`, no lost writes, late-arrival auto-mount working.
